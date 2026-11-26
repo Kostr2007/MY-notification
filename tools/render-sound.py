@@ -41,11 +41,57 @@ DROP = (
     "afade=t=in:d=0.012,afade=t=out:st=0.080:d=0.128,adelay=26,"
     "apad,atrim=duration=0.265"
 )
+
+
+def two_notes(
+    *, start, pitch, interval, delay, reply_level, attack, fade, lowpass,
+    sample_length=0.65, first_fade=(90, 160),
+):
+    # Two pitches of the same acoustic note share its attack and resonance.
+    first_rate = round(RATE * 2 ** (pitch / 12))
+    second_rate = round(RATE * 2 ** ((pitch + interval) / 12))
+    first_fade_start, first_fade_time = first_fade
+    fade_start_ms, fade_time_ms = fade
+    lead_ms = 38
+    reply_ms = lead_ms + delay
+    length = (reply_ms + fade_start_ms + fade_time_ms) * (RATE // 1000)
+    return (
+        f"{MONO},atrim=start={start}:duration={sample_length},asetpts=PTS-STARTPTS,"
+        f"afade=t=out:st={sample_length - 0.08:.3f}:d=0.08,asplit=2[hit][reply];"
+        f"[hit]asetrate={first_rate},aresample={RATE},highpass=f=180,lowpass=f={lowpass},"
+        f"afade=t=in:d={attack},"
+        f"afade=t=out:st={first_fade_start}ms:d={first_fade_time}ms:curve=qsin,"
+        f"adelay={lead_ms}[front];"
+        f"[reply]asetrate={second_rate},aresample={RATE},highpass=f=220,lowpass=f={lowpass},"
+        f"afade=t=in:d={attack},afade=t=out:st={fade_start_ms}ms:d={fade_time_ms}ms:curve=qsin,"
+        f"volume={reply_level},adelay={reply_ms}[back];"
+        f"[front][back]amix=inputs=2:normalize=0,apad=whole_len={length},atrim=end_sample={length}"
+    )
+
+
 CUES = {
     "glass": ("kenney-glass-clink.wav", GLASS, -15),
     "wood": ("wood.mp3", WOOD, -16),
     "paper": ("paper.mp3", PAPER, -14),
     "drop": ("drop.mp3", DROP, -18),
+    "kalimba": (
+        "kalimba.mp3",
+        two_notes(start=0, pitch=0, interval=4, delay=82, reply_level=0.62,
+                  attack=0.0026, fade=(115, 192), lowpass=4350),
+        -17,
+    ),
+    "piano": (
+        "piano.mp3",
+        two_notes(start=0, pitch=2, interval=-2, delay=112, reply_level=0.52,
+                  attack=0.006, fade=(86, 201), lowpass=3800, first_fade=(62, 98)),
+        -20,
+    ),
+    "nylon": (
+        "nylon.mp3",
+        two_notes(start=0.016, pitch=5, interval=7, delay=91, reply_level=0.51,
+                  attack=0.004, fade=(105, 140), lowpass=4000, sample_length=0.44),
+        -18,
+    ),
 }
 
 

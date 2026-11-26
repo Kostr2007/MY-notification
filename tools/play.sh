@@ -12,9 +12,9 @@ case "${1:-}" in
     fi
     ;;
   "") ;;
-  glass|wood|paper|drop) cue=$1 ;;
+  glass|wood|paper|drop|kalimba|piano|nylon) cue=$1 ;;
   *)
-    printf 'Usage: my-notification [glass|wood|paper|drop|--dunst]\n' >&2
+    printf 'Usage: my-notification [glass|wood|paper|drop|kalimba|piano|nylon|--dunst]\n' >&2
     exit 2
     ;;
 esac

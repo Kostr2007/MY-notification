@@ -107,9 +107,16 @@
   <div class="controls">
     <label for="variant">Звук
       <select id="variant">
-        <option value="wood">Дерево</option>
-        <option value="paper">Бумага</option>
-        <option value="drop">Капля</option>
+        <optgroup label="Новые варианты">
+          <option value="kalimba">Калимба</option>
+          <option value="piano">Пианино</option>
+          <option value="nylon">Нейлоновая струна</option>
+        </optgroup>
+        <optgroup label="Предыдущие варианты">
+          <option value="wood">Дерево</option>
+          <option value="paper">Бумага</option>
+          <option value="drop">Капля</option>
+        </optgroup>
       </select>
     </label>
     <button id="show" type="button">Показать уведомление</button>
@@ -117,11 +124,11 @@
   </div>
   <div class="controls">
     <label><input id="sound" type="checkbox" checked> Со звуком</label>
-    <a id="download" href="../audio/wood.wav" download>Скачать WAV</a>
+    <a id="download" href="../audio/kalimba.wav" download>Скачать WAV</a>
   </div>
   <p id="status" role="status"></p>
-  <audio id="cue" src="../audio/wood.wav" preload="auto"></audio>
-  <audio id="source" src="../audio/source/wood.mp3" preload="none"></audio>
+  <audio id="cue" src="../audio/kalimba.wav" preload="auto"></audio>
+  <audio id="source" src="../audio/source/kalimba.mp3" preload="none"></audio>
 </main>
 <script>
   const card = document.querySelector("#card");
@@ -129,6 +136,7 @@
   const close = document.querySelector("#close");
   const cue = document.querySelector("#cue");
   const source = document.querySelector("#source");
+  const sourceButton = document.querySelector("#source-button");
   const variant = document.querySelector("#variant");
   const download = document.querySelector("#download");
   const sound = document.querySelector("#sound");
@@ -194,15 +202,26 @@
 
   function selectSound() {
     status.textContent = "";
+    source.pause();
     cue.src = download.href = `../audio/${variant.value}.wav`;
     source.src = `../audio/source/${variant.value}.mp3`;
   }
 
   variant.addEventListener("change", selectSound);
-  document.querySelector("#source-button").addEventListener("click", () => {
+  sourceButton.addEventListener("click", () => {
     status.textContent = "";
+    if (!source.paused) {
+      source.pause();
+      return;
+    }
     cue.pause();
     playClip(source);
+  });
+  source.addEventListener("play", () => {
+    sourceButton.textContent = "Остановить исходник";
+  });
+  source.addEventListener("pause", () => {
+    sourceButton.textContent = "Послушать исходник";
   });
 
   show.addEventListener("click", () => {
@@ -225,6 +244,6 @@
   sound.addEventListener("change", () => {
     if (!sound.checked) cue.pause();
   });
-  if (variant.value !== "wood") selectSound();
+  if (variant.value !== "kalimba") selectSound();
 </script>
 </html>
