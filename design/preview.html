@@ -107,8 +107,13 @@
   <div class="controls">
     <label for="variant">Звук
       <select id="variant">
-        <option value="lullaby" data-source="kalimba">Колыбельная</option>
-        <optgroup label="Новые варианты">
+        <optgroup label="Колыбельная">
+          <option value="lullaby-dawn" data-source="kalimba">Рассвет</option>
+          <option value="lullaby-sway" data-source="kalimba">Качание</option>
+          <option value="lullaby-glow" data-source="kalimba-g4">Огонёк</option>
+          <option value="lullaby" data-source="kalimba">Прежняя версия</option>
+        </optgroup>
+        <optgroup label="Другие сигналы">
           <option value="kalimba">Калимба</option>
           <option value="piano">Пианино</option>
           <option value="nylon">Нейлоновая струна</option>
@@ -125,10 +130,10 @@
   </div>
   <div class="controls">
     <label><input id="sound" type="checkbox" checked> Со звуком</label>
-    <a id="download" href="../audio/lullaby.wav" download>Скачать WAV</a>
+    <a id="download" href="../audio/lullaby-dawn.wav" download>Скачать WAV</a>
   </div>
   <p id="status" role="status"></p>
-  <audio id="cue" src="../audio/lullaby.wav" preload="auto"></audio>
+  <audio id="cue" src="../audio/lullaby-dawn.wav" preload="auto"></audio>
   <audio id="source" src="../audio/source/kalimba.mp3" preload="none"></audio>
 </main>
 <script>
@@ -246,6 +251,6 @@
   sound.addEventListener("change", () => {
     if (!sound.checked) cue.pause();
   });
-  if (variant.value !== "lullaby") selectSound();
+  if (variant.value !== "lullaby-dawn") selectSound();
 </script>
 </html>

@@ -14,7 +14,7 @@ play_event() {
 
 play_cue() {
   case "$1" in
-    lullaby|kalimba|piano|nylon|glass|wood|paper|drop) ;;
+    lullaby|lullaby-dawn|lullaby-sway|lullaby-glow|kalimba|piano|nylon|glass|wood|paper|drop) ;;
     *) return 2 ;;
   esac
 
@@ -48,7 +48,7 @@ case "${1:-lullaby}" in
     ;;
   *)
     if ! play_cue "${1:-lullaby}"; then
-      printf 'Usage: my-notification [lullaby|kalimba|piano|nylon|glass|wood|paper|drop]\n' >&2
+      printf 'Usage: my-notification [lullaby|lullaby-dawn|lullaby-sway|lullaby-glow|kalimba|piano|nylon|glass|wood|paper|drop]\n' >&2
       exit 2
     fi
     ;;

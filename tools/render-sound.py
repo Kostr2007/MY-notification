@@ -3,10 +3,12 @@
 
 import argparse
 import array
+import json
 import math
 from pathlib import Path
 import subprocess
 import sys
+from typing import NamedTuple
 import wave
 
 RATE = 48_000
@@ -136,23 +138,127 @@ CUES = {
 }
 
 
-def render(name, ffmpeg, output):
-    source, filters, peak_db = CUES[name]
+class Note(NamedTuple):
+    source: str
+    onset_ms: int
+    gain: float
+    attack_ms: int
+    fade_start_ms: int
+    fade_ms: int
+    treble_db: float = 2.2
+
+
+# The E5 and G4 recordings are louder than C5. The gains balance the
+# individual attacks and keep the later notes quieter.
+PHRASES = {
+    "lullaby-dawn": (
+        Note("kalimba.mp3", 36, 1.00, 2, 78, 120),
+        Note("kalimba-e5.mp3", 142, 0.24, 3, 115, 174),
+    ),
+    "lullaby-sway": (
+        Note("kalimba.mp3", 36, 1.00, 2, 66, 105),
+        Note("kalimba-e5.mp3", 116, 0.22, 3, 62, 117),
+        Note("kalimba.mp3", 218, 0.48, 4, 105, 179),
+    ),
+    "lullaby-glow": (
+        Note("kalimba-g4.mp3", 36, 0.57, 2, 65, 118, treble_db=-2.0),
+        Note("kalimba.mp3", 136, 0.77, 3, 101, 174),
+        Note("kalimba-e5.mp3", 159, 0.10, 5, 109, 182),
+    ),
+}
+PHRASE_RMS_DB = -21.5
+PHRASE_PEAK_DB = -10
+WINDOW_SAMPLES = RATE * 5 // 1000
+
+
+def read_pcm(ffmpeg, inputs, filters):
     raw = subprocess.check_output(
-        [
-            ffmpeg, "-v", "error", "-i", str(ROOT / "audio/source" / source),
-            "-filter_complex", filters, "-f", "f32le", "pipe:1",
-        ]
+        [ffmpeg, "-v", "error", *inputs, *filters, "-f", "f32le", "pipe:1"]
     )
     samples = array.array("f", raw)
     if sys.byteorder == "big":
         samples.byteswap()
+    return samples
 
-    peak = max(abs(sample) for sample in samples)
+
+def window_energies(samples):
+    return [
+        sum(value * value for value in samples[i:i + WINDOW_SAMPLES])
+        for i in range(0, len(samples), WINDOW_SAMPLES)
+    ]
+
+
+def loudest_50ms(energies):
+    return max(sum(energies[i:i + 10]) for i in range(len(energies))) / (10 * WINDOW_SAMPLES)
+
+
+def power_db(power):
+    return round(10 * math.log10(max(power, 1e-12)), 1)
+
+
+def analyze(path, ffmpeg):
+    inputs = ["-i", str(path)]
+    mono = MONO.removeprefix("[0:a]")
+    samples = read_pcm(ffmpeg, inputs, ["-af", mono])
+    energies = window_energies(samples)
+    if not energies or max(energies) <= 0:
+        raise ValueError(f"{path}: no audible signal")
+
+    peak_window = max(energies)
+    first = next(i for i, energy in enumerate(energies) if energy >= peak_window * 0.001)
+    last = max(i for i, energy in enumerate(energies) if energy >= peak_window * 10 ** (-3.5))
+    presence_pcm = read_pcm(ffmpeg, inputs, ["-af", f"{mono},highpass=f=2500,lowpass=f=6000"])
+    front = slice(first * WINDOW_SAMPLES, (first + 12) * WINDOW_SAMPLES)
+    front_energy = sum(value * value for value in samples[front])
+    presence = sum(value * value for value in presence_pcm[front]) / front_energy
+    return {
+        "file": str(path),
+        "duration_ms": round(1000 * len(samples) / RATE, 1),
+        "onset_ms": first * 5,
+        "active_end_ms": min((last + 1) * 5, round(1000 * len(samples) / RATE, 1)),
+        "peak_dbfs": power_db(max(map(abs, samples)) ** 2),
+        "max_50ms_rms_dbfs": power_db(loudest_50ms(energies)),
+        "attack_2500_6000_hz_db": power_db(presence),
+    }
+
+
+def render_phrase(notes, ffmpeg):
+    inputs = []
+    graph = []
+    for i, note in enumerate(notes):
+        inputs += ["-i", str(ROOT / "audio/source" / note.source)]
+        graph.append(
+            f"[{i}:a]{MONO.removeprefix('[0:a]')},highpass=f=175,lowpass=f=6200,"
+            f"treble=f=2700:g={note.treble_db},afade=t=in:d={note.attack_ms}ms,"
+            f"afade=t=out:st={note.fade_start_ms}ms:d={note.fade_ms}ms:curve=qsin,"
+            f"volume={note.gain},adelay={note.onset_ms}[note{i}]"
+        )
+    length = max(note.onset_ms + note.fade_start_ms + note.fade_ms for note in notes)
+    pads = "".join(f"[note{i}]" for i in range(len(notes)))
+    graph.append(
+        f"{pads}amix=inputs={len(notes)}:normalize=0,"
+        "acompressor=threshold=0.10:ratio=2.5:attack=0.2:release=14:knee=2:detection=peak,"
+        f"atrim=end_sample={length * RATE // 1000}"
+    )
+    return read_pcm(ffmpeg, inputs, ["-filter_complex", ";".join(graph)])
+
+
+def render(name, ffmpeg, output):
+    if name in PHRASES:
+        samples = render_phrase(PHRASES[name], ffmpeg)
+        peak_db = PHRASE_PEAK_DB
+    else:
+        source, filters, peak_db = CUES[name]
+        samples = read_pcm(ffmpeg, ["-i", str(ROOT / "audio/source" / source)], ["-filter_complex", filters])
+
+    peak = max((abs(sample) for sample in samples), default=0.0)
     if not math.isfinite(peak) or peak <= 0:
         raise ValueError(f"{name}: the processed recording has no usable signal")
-    gain = 32_767 * 10 ** (peak_db / 20) / peak
-    pcm = array.array("h", (round(sample * gain) for sample in samples))
+    gain = 10 ** (peak_db / 20) / peak
+    if name in PHRASES:
+        rms = math.sqrt(loudest_50ms(window_energies(samples)))
+        gain = min(gain, 10 ** (PHRASE_RMS_DB / 20) / rms)
+    pcm = array.array("h", (round(sample * (32_767 * gain)) for sample in samples))
     if sys.byteorder == "big":
         pcm.byteswap()
 
@@ -163,14 +269,22 @@ def render(name, ffmpeg, output):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("cue", nargs="?", default="glass", choices=(*CUES, "all"))
+    cues = (*CUES, *PHRASES)
+    parser.add_argument("cue", nargs="?", choices=(*cues, "all"))
     parser.add_argument("--ffmpeg", default="ffmpeg")
     parser.add_argument("--output", type=Path)
+    parser.add_argument("--analyze", nargs="+", type=Path, metavar="FILE",
+                        help="report duration, attack presence, peak and loudest 50 ms RMS")
     args = parser.parse_args()
 
+    if args.analyze:
+        if args.cue or args.output:
+            parser.error("--analyze takes input files only")
+        print(json.dumps([analyze(path, args.ffmpeg) for path in args.analyze], ensure_ascii=False, indent=2))
+        return
     if args.cue == "all" and args.output:
         parser.error("--output requires a single cue")
-    for name in CUES if args.cue == "all" else (args.cue,):
+    for name in cues if args.cue == "all" else (args.cue or "glass",):
         render(name, args.ffmpeg, args.output or ROOT / "audio" / f"{name}.wav")
 
 
