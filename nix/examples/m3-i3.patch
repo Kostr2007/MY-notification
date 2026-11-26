@@ -1,0 +1,51 @@
+--- a/flake.nix
++++ b/flake.nix
+@@ -67,6 +67,11 @@
+       inputs.nixpkgs.follows = "nixpkgs";
+     };
+ 
++    my-notification = {
++      url = "github:Kostr2007/MY-notification";
++      inputs.nixpkgs.follows = "nixpkgs";
++    };
++
+     # ForgeSound Engine — студия коротких звуков (Audacity + Surge XT). Пока этап 0:
+     # flake лежит только в исследовательской ветке, в main его ещё нет.
+     # nixpkgs НЕ подменяем на системный: surgepy проверен на закреплённой
+@@ -116,7 +121,7 @@
+           {
+             home-manager.useGlobalPkgs = true;
+             home-manager.useUserPackages = true;
+-            home-manager.extraSpecialArgs = { wallpaper-my = inputs.wallpaper-my; };
++            home-manager.extraSpecialArgs = { inherit (inputs) wallpaper-my my-notification; };
+             home-manager.backupFileExtension = "backup";
+             # если старый *.backup уже есть (после KDE), перезаписать его, а не падать
+             home-manager.overwriteBackup = true;
+--- a/home/desktop/core.nix
++++ b/home/desktop/core.nix
+@@ -12,6 +12,7 @@
+   pkgs,
+   lib,
+   wallpaper-my,
++  my-notification,
+   ...
+ }:
+ 
+@@ -67,7 +68,7 @@
+     glib # gio
+   ];
+ 
+-  m3 = pkgs.stdenv.mkDerivation {
++  m3Base = pkgs.stdenv.mkDerivation {
+     pname = "m3";
+     version = "2.0";
+     src = ./m3;
+@@ -143,6 +144,8 @@
+     };
+   };
+ 
++  m3 = my-notification.lib.withM3 pkgs m3Base;
++
+   legacyWallpapers = pkgs.callPackage ../../wallpapers/layered.nix {
+     inherit (cfg.wallpaperResolution) width height;
+   };

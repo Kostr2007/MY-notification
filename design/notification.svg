@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="420" height="144" viewBox="0 0 420 144" role="img" aria-labelledby="title description">
+  <title id="title">Резервная копия готова</title>
+  <desc id="description">Обычное уведомление системы с тональной иконкой и кнопкой закрытия.</desc>
+  <style>
+    .card { fill: #272a2f; }
+    .rim { stroke: #42474e; }
+    .icon-bg { fill: #144a74; }
+    .icon { stroke: #cfe4ff; }
+    .title { fill: #e0e2e8; }
+    .secondary { fill: #c2c7cf; }
+    .accent { fill: #9dcafc; }
+    .close-bg { fill: #32353a; }
+    .close { stroke: #c2c7cf; }
+    @media (prefers-color-scheme: light) {
+      .card { fill: #e5e8ee; }
+      .rim { stroke: #c2c7cf; }
+      .icon-bg { fill: #cfe4ff; }
+      .icon { stroke: #001d34; }
+      .title { fill: #181c20; }
+      .secondary { fill: #42474e; }
+      .accent { fill: #32628d; }
+      .close-bg { fill: #dfe2e8; }
+      .close { stroke: #42474e; }
+    }
+  </style>
+
+  <rect class="card rim" x=".5" y=".5" width="419" height="143" rx="24"/>
+  <g transform="translate(20 25)">
+    <path class="icon-bg" d="M25 0C41 0 50 9 50 25S41 50 25 50 0 41 0 25 9 0 25 0Z"/>
+    <g class="icon" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="15" y="17" width="20" height="17" rx="3"/>
+      <path d="M15 22h20m-14 5 3 3 5-5"/>
+    </g>
+  </g>
+  <g font-family="Google Sans, Roboto, system-ui, sans-serif">
+    <text class="accent" x="86" y="34" font-size="13" font-weight="600">Система</text>
+    <circle class="secondary" cx="148" cy="30" r="1.5"/>
+    <text class="secondary" x="159" y="34" font-size="13">сейчас</text>
+    <text class="title" x="86" y="63" font-size="20" font-weight="600">Резервная копия готова</text>
+    <text class="secondary" x="86" y="92" font-size="14">
+      <tspan x="86">Изменения сохранены на внешнем</tspan>
+      <tspan x="86" dy="20">диске.</tspan>
+    </text>
+  </g>
+  <circle class="close-bg" cx="384" cy="34" r="15"/>
+  <path class="close" d="m380 30 8 8m0-8-8 8" fill="none" stroke-width="1.7" stroke-linecap="round"/>
+</svg>

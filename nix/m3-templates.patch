@@ -1,0 +1,72 @@
+--- a/templates/dunstrc.j2
++++ b/templates/dunstrc.j2
+@@ -9,7 +9,7 @@
+ [global]
+     monitor = 0
+     follow = mouse
+-    width = (340, 440)
++    width = (340, 420)
+     height = (0, 320)
+ {% if pos == "top-center" %}
+     origin = top-center
+@@ -31,13 +31,13 @@
+     transparency = 0
+     separator_height = 0
+     padding = 16
+-    horizontal_padding = 18
++    horizontal_padding = 20
+     text_icon_padding = 16
+     frame_width = 0
+     frame_color = "{{ c.outline_variant }}"
+     gap_size = 10
+     separator_color = frame
+-    corner_radius = {{ (22 * k) | round | int }}
++    corner_radius = {{ (24 * k) | round | int }}
+     icon_corner_radius = {{ (14 * k) | round | int }}
+     sort = yes
+ 
+@@ -101,10 +101,10 @@
+     override_dbus_timeout = {{ n.timeout }}
+ 
+ {% if n.sound %}
+-# звук уведомления (m3-notify-sound сам пропускает OSD и служебные)
++# Звук обычных уведомлений. Скрипт пропускает OSD и служебные плашки.
+ [m3-sound]
+     msg_urgency = normal
+-    script = m3-notify-sound
++    script = @my_notification@ --dunst
+ {% endif %}
+ 
+ # OSD громкости от m3-osd, если окно OSD eww недоступно
+--- a/templates/picom.conf.j2
++++ b/templates/picom.conf.j2
+@@ -10,7 +10,7 @@
+ {% set d = t.dur %}
+ {% set k = t.r_window / 14 %}
+ {% set r_popup = t.shape.xl %}
+-{% set r_notif = (22 * k) | round | int %}
++{% set r_notif = (24 * k) | round | int %}
+ {% set r_menu = (10 * k) | round | int %}
+ {% set dnd = "window_type = 'dnd' || (override_redirect && !_NET_WM_WINDOW_TYPE@ && XdndAware@ && class_g != 'i3-frame')" %}
+ {% set overlays = "class_g = 'flameshot' || class_g = 'skippy-xd' || class_g = 'i3lock' || class_i = 'i3lock' || class_g = 'Peek' || class_g = 'slop'" %}
+@@ -160,16 +160,16 @@
+       { triggers = [ "geometry" ]; opacity = 1; }
+     ); },
+ 
+-  # уведомления влетают справа и уходят вправо
++  # MY Notification: короткое смещение с пружиной и отдельное появление по альфе.
+   { match = "class_g = 'Dunst'";
+     animations = (
+       { triggers = [ "open", "show" ];
+-        opacity = { curve = "{{ e.emph_decel }}"; duration = {{ d.medium2 | sec }}; start = 0.0; end = 1.0; };
+-        offset-x = { curve = "{{ e.spring }}"; duration = {{ d.long1 | sec }}; start = "window-width / 2"; end = 0.0; };
++        opacity = { curve = "{{ e.emph_decel }}"; duration = {{ d.short2 | sec }}; start = 0.0; end = 1.0; };
++        offset-x = { curve = "{{ e.spring_fast }}"; duration = {{ d.medium1 | sec }}; start = 24.0; end = 0.0; };
+         shadow-offset-x = "offset-x"; blur-opacity = "opacity"; shadow-opacity = "opacity"; },
+       { triggers = [ "close", "hide" ];
+         opacity = { curve = "{{ e.emph_accel }}"; duration = {{ d.short4 | sec }}; start = 1.0; end = 0.0; };
+-        offset-x = { curve = "{{ e.emph_accel }}"; duration = {{ d.short4 | sec }}; start = 0.0; end = "window-width / 3"; };
++        offset-x = { curve = "{{ e.emph_accel }}"; duration = {{ d.short4 | sec }}; start = 0.0; end = 16.0; };
+         shadow-offset-x = "offset-x"; blur-opacity = "opacity"; shadow-opacity = "opacity"; },
+       { triggers = [ "geometry" ]; preset = "geometry-change"; duration = {{ d.medium1 | sec }}; }
+     ); },
