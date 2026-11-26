@@ -70,8 +70,18 @@
     background: transparent;
   }
   .controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin-top: 18px; }
-  button { cursor: pointer; font: inherit; }
-  button:focus-visible, input:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+  button, select { cursor: pointer; font: inherit; }
+  :is(button, select, input):focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+  select, #source-button {
+    min-height: 44px;
+    padding: 8px 14px;
+    border: 1px solid var(--outline);
+    border-radius: 16px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  #source-button:hover { border-color: var(--primary); }
+  #download { color: var(--primary); }
   #show {
     padding: 10px 19px;
     min-height: 44px;
@@ -95,22 +105,38 @@
     </div>
   </div>
   <div class="controls">
+    <label for="variant">Звук
+      <select id="variant">
+        <option value="wood">Дерево</option>
+        <option value="paper">Бумага</option>
+        <option value="drop">Капля</option>
+      </select>
+    </label>
     <button id="show" type="button">Показать уведомление</button>
+    <button id="source-button" type="button">Послушать исходник</button>
+  </div>
+  <div class="controls">
     <label><input id="sound" type="checkbox" checked> Со звуком</label>
-    <a href="../audio/glass.wav" download style="color: var(--primary)">Скачать WAV</a>
+    <a id="download" href="../audio/wood.wav" download>Скачать WAV</a>
   </div>
   <p id="status" role="status"></p>
-  <audio id="cue" src="../audio/glass.wav" preload="auto"></audio>
+  <audio id="cue" src="../audio/wood.wav" preload="auto"></audio>
+  <audio id="source" src="../audio/source/wood.mp3" preload="none"></audio>
 </main>
 <script>
   const card = document.querySelector("#card");
   const show = document.querySelector("#show");
   const close = document.querySelector("#close");
   const cue = document.querySelector("#cue");
+  const source = document.querySelector("#source");
+  const variant = document.querySelector("#variant");
+  const download = document.querySelector("#download");
   const sound = document.querySelector("#sound");
   const status = document.querySelector("#status");
   const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
 
+  // The originals have different recording levels. Attenuate playback only.
+  source.volume = 0.5;
   let animations = [];
   let closeTimer;
 
@@ -159,6 +185,26 @@
     };
   }
 
+  function playClip(clip) {
+    clip.currentTime = 0;
+    clip.play().catch(error => {
+      if (error.name !== "AbortError") status.textContent = "Браузер не смог воспроизвести звук.";
+    });
+  }
+
+  function selectSound() {
+    status.textContent = "";
+    cue.src = download.href = `../audio/${variant.value}.wav`;
+    source.src = `../audio/source/${variant.value}.mp3`;
+  }
+
+  variant.addEventListener("change", selectSound);
+  document.querySelector("#source-button").addEventListener("click", () => {
+    status.textContent = "";
+    cue.pause();
+    playClip(source);
+  });
+
   show.addEventListener("click", () => {
     resetAnimation();
     status.textContent = "";
@@ -171,18 +217,14 @@
         card.animate(springFrames(120, effects, p => ({ opacity: p })), 120),
       ];
     }
-    cue.pause();
-    if (sound.checked) {
-      cue.currentTime = 0;
-      cue.play().catch(error => {
-        if (error.name !== "AbortError") status.textContent = "Браузер не смог воспроизвести звук.";
-      });
-    }
+    source.pause();
+    if (sound.checked) playClip(cue);
     closeTimer = setTimeout(dismiss, 7000);
   });
   close.addEventListener("click", dismiss);
   sound.addEventListener("change", () => {
     if (!sound.checked) cue.pause();
   });
+  if (variant.value !== "wood") selectSound();
 </script>
 </html>

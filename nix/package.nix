@@ -8,12 +8,11 @@
 
 stdenvNoCC.mkDerivation {
   pname = "my-notification";
-  version = "0.1.0";
+  version = "0.2.0";
   src = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [
-      ../audio/glass.wav
-      ../audio/CREDITS.md
+      ../audio
       ../design
       ../tools/play.sh
     ];
@@ -25,8 +24,8 @@ stdenvNoCC.mkDerivation {
   installPhase = ''
     runHook preInstall
     install -Dm755 tools/play.sh "$out/libexec/my-notification"
-    install -Dm644 audio/glass.wav "$out/share/my-notification/audio/glass.wav"
-    install -Dm644 audio/CREDITS.md "$out/share/my-notification/audio/CREDITS.md"
+    install -Dm644 -t "$out/share/my-notification/audio" audio/*.wav audio/CREDITS.md
+    install -Dm644 -t "$out/share/my-notification/audio/source" audio/source/*
     install -Dm644 design/notification.svg "$out/share/my-notification/design/notification.svg"
     install -Dm644 design/preview.html "$out/share/my-notification/design/preview.html"
     patchShebangs "$out/libexec/my-notification"
@@ -37,12 +36,12 @@ stdenvNoCC.mkDerivation {
           libcanberra-gtk3
         ]
       } \
-      --set MY_NOTIFICATION_WAV "$out/share/my-notification/audio/glass.wav"
+      --set MY_NOTIFICATION_AUDIO_DIR "$out/share/my-notification/audio"
     runHook postInstall
   '';
 
   meta = {
-    description = "Glass notification sound and Material You preview";
+    description = "Notification sounds and Material You preview";
     mainProgram = "my-notification";
     platforms = lib.platforms.linux;
   };

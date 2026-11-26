@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+cue=glass
 case "${1:-}" in
   --dunst)
     case "${DUNST_URGENCY:-NORMAL}" in NORMAL) ;; *) exit 0 ;; esac
@@ -11,10 +12,11 @@ case "${1:-}" in
     fi
     ;;
   "") ;;
+  glass|wood|paper|drop) cue=$1 ;;
   *)
-    printf 'Usage: my-notification [--dunst]\n' >&2
+    printf 'Usage: my-notification [glass|wood|paper|drop|--dunst]\n' >&2
     exit 2
     ;;
 esac
 
-exec canberra-gtk-play --file="${MY_NOTIFICATION_WAV:?}" --description="MY Notification"
+exec canberra-gtk-play --file="${MY_NOTIFICATION_AUDIO_DIR:?}/$cue.wav" --description="MY Notification"
