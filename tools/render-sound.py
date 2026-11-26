@@ -102,7 +102,7 @@ CUES = {
         two_notes(pitch=0, interval=-3, delay=126, reply_level=0.46,
                   start=0, attack=0.005, fade=(155, 234), first_fade=(123, 198),
                   lowpass=2900),
-        -18,
+        -12,
     ),
     "volume": ("kalimba.mp3", VOLUME, -24),
     "connect": (

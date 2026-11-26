@@ -23,7 +23,7 @@ let
 in
 stdenvNoCC.mkDerivation {
   pname = "my-notification";
-  version = "0.4.1";
+  version = "0.4.2";
   src = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [

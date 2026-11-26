@@ -58,3 +58,152 @@
    xdg.configFile."matugen/config.toml".text = matugenConfig;
  
    # Обои m3 (свои клади в ~/Изображения/Wallpapers или ~/Pictures/Wallpapers)
+--- a/home/desktop/eww/control-center.yuck
++++ b/home/desktop/eww/control-center.yuck
+@@ -76,7 +76,7 @@
+     (box :spacing 10 :space-evenly true
+       (tile :icon {toggles.dnd ? "do_not_disturb_on" : "do_not_disturb_off"} :title "Не беспокоить"
+             :sub {toggles.dnd ? "Уведомления скрыты" : "Выключено"}
+-            :active {toggles.dnd} :onclick "(m3-toggle dnd) &")
++            :active {toggles.dnd} :onclick "m3-toggle dnd")
+       (tile :icon "nightlight" :title "Ночной свет"
+             :sub {toggles.night ? "Тёплые тона" : "Выключен"}
+             :active {toggles.night} :onclick "(m3-toggle night) &"
+@@ -88,7 +88,7 @@
+             :onrightclick "(m3-popup close; m3-settings --page appearance) &")
+       (tile :icon "coffee" :title "Без сна"
+             :sub {toggles.caffeine ? "Экран не гаснет" : "Выключено"}
+-            :active {toggles.caffeine} :onclick "(m3-toggle caffeine) &"))
++            :active {toggles.caffeine} :onclick "m3-toggle caffeine"))
+     (box :spacing 10 :space-evenly true
+       (tile :icon "dashboard" :title "Автотайлинг"
+             :sub {toggles.autotiling ? "Спираль" : "Вручную"}
+@@ -174,7 +174,7 @@
+     (box :space-evenly false :spacing 8
+       (label :class "card-title" :xalign 0 :hexpand true
+              :text "Уведомления${arraylength(notif_history) > 0 ? ' · ' + arraylength(notif_history) : ''}")
+-      (button :class "pill-btn ${toggles.dnd ? 'on' : ''}" :onclick "(m3-toggle dnd) &"
++      (button :class "pill-btn dnd-toggle ${toggles.dnd ? 'on' : ''}" :onclick "(m3-toggle dnd) &"
+         (box :space-evenly false :spacing 6
+           (sym :icon {toggles.dnd ? "notifications_off" : "notifications_active"})
+           (label :text {toggles.dnd ? "Тихо" : "Звук"})))
+--- a/home/desktop/eww/eww.scss
++++ b/home/desktop/eww/eww.scss
+@@ -192,6 +192,8 @@
+ }
+ .icon-btn:hover { background-color: rgba($on-surface, 0.08); }
+ .icon-btn:active { background-color: rgba($on-surface, 0.12); border-radius: $r-m; }
++.cc-header .icon-btn { transition: background-color ($fast * .5) $standard; }
++.cc-header .icon-btn:active { border-radius: $r-full; }
+ .icon-btn.tonal { background-color: $secondary-container; color: $on-secondary-container; }
+ .icon-btn.filled { background-color: $primary; color: $on-primary; min-width: 48px; border-radius: $r-l; }
+ 
+@@ -205,8 +207,14 @@
+   label { font-size: $fs - 1px; color: $on-secondary-container; }
+   .sym { font-size: 18px; color: $on-secondary-container; }
+ }
++.pill-btn.dnd-toggle {
++  min-width: 76px;
++  transition: background-color ($fast * .5) $standard;
++}
+ .pill-btn:hover { background-color: hover($secondary-container, $on-secondary-container); }
+ .pill-btn.on { background-color: $tertiary-container; label, .sym { color: $on-tertiary-container; } }
++.pill-btn:active { background-color: press($secondary-container, $on-secondary-container); }
++.pill-btn.on:active { background-color: press($tertiary-container, $on-tertiary-container); }
+ 
+ // ── шапка ──
+ .cc-header { padding: 2px 2px 0 2px; }
+@@ -280,13 +288,13 @@
+   padding: 12px 14px;
+   border-radius: $r-li;
+   background-color: $surface-container-high;
+-  transition: background-color $medium $standard, border-radius $slow $spring;
++  transition: background-color ($fast * .5) $standard, border-radius ($fast * .5) $standard;
+   .tile-icon {
+     min-width: 40px;
+     min-height: 40px;
+     border-radius: $r-m;
+     background-color: $surface-container-highest;
+-    transition: background-color $medium $standard, border-radius $slow $spring;
++    transition: background-color ($fast * .5) $standard, border-radius ($fast * .5) $standard;
+     .sym { font-size: 22px; color: $on-surface-variant; }
+   }
+   .tile-title { font-size: $fs; font-weight: 700; color: $on-surface; }
+@@ -295,13 +303,14 @@
+ .tile:hover { background-color: hover($surface-container-high, $on-surface); }
+ .tile:active { background-color: press($surface-container-high, $on-surface); }
+ .tile.on {
+-  border-radius: $r-full;
++  border-radius: 32px;
+   background-color: $primary-container;
+-  .tile-icon { border-radius: $r-full; background-color: $primary; .sym { color: $on-primary; } }
++  .tile-icon { border-radius: 20px; background-color: $primary; .sym { color: $on-primary; } }
+   .tile-title { color: $on-primary-container; }
+   .tile-sub { color: rgba($on-primary-container, 0.8); }
+ }
+ .tile.on:hover { background-color: hover($primary-container, $on-primary-container); }
++.tile.on:active { background-color: press($primary-container, $on-primary-container); }
+ 
+ // ── плеер ──
+ .media-card {
+--- a/home/desktop/scripts/m3-toggle.sh
++++ b/home/desktop/scripts/m3-toggle.sh
+@@ -37,12 +37,10 @@
+   caffeine)
+     if [[ -e "$run/caffeine" ]]; then
+       rm -f "$run/caffeine"
+-      m3 apply power >/dev/null # вернуть таймеры из «Параметры → Питание»
+-      osd "Сон по таймеру включён" "preferences-desktop-screensaver"
++      m3 apply-power # вернуть таймеры из «Параметры → Питание»
+     else
+       touch "$run/caffeine"
+       xset s off -dpms
+-      osd "Экран не будет гаснуть" "caffeine"
+     fi
+     ;;
+   autotiling)
+--- a/home/desktop/services.nix
++++ b/home/desktop/services.nix
+@@ -52,6 +52,7 @@
+       Description = "dunst — уведомления (Material You)";
+       After = [ "i3-session.target" ];
+       PartOf = [ "i3-session.target" ];
++      StartLimitIntervalSec = 0;
+       X-Restart-Triggers = [ "${config.m3.package}" ];
+     };
+     Service = {
+@@ -60,6 +61,7 @@
+       ExecStartPre = "${pkgs.bash}/bin/bash -c 'test -s ${cache}/dunstrc || ${config.m3.package}/bin/m3 render'";
+       ExecStart = "${pkgs.dunst}/bin/dunst -config ${cache}/dunstrc";
+       Restart = "on-failure";
++      RestartSec = 2;
+     };
+     Install.WantedBy = [ "i3-session.target" ];
+   };
+@@ -88,7 +90,7 @@
+   # фиксированного «xset s 600» home-manager'а их выставляет m3.
+   systemd.user.services.xss-lock = lib.mkMerge [
+     i3Only
+-    { Service.ExecStartPre = lib.mkForce "${config.m3.package}/bin/m3 apply power"; }
++    { Service.ExecStartPre = lib.mkForce "${config.m3.package}/bin/m3 apply-power"; }
+   ];
+ 
+   # ======================== Агент polkit (окно пароля) ========================
+--- a/home/desktop/theme.nix
++++ b/home/desktop/theme.nix
+@@ -112,6 +112,7 @@
+       Description = "XSETTINGS (Material You)";
+       After = [ "i3-session.target" ];
+       PartOf = [ "i3-session.target" ];
++      StartLimitIntervalSec = 0;
+       X-Restart-Triggers = [ "${config.m3.package}" ];
+     };
+     Service = {
+@@ -119,6 +120,7 @@
+       ExecStart = "${pkgs.xsettingsd}/bin/xsettingsd -c ${cache}/xsettingsd.conf";
+       ExecReload = "${pkgs.coreutils}/bin/kill -HUP $MAINPID";
+       Restart = "on-failure";
++      RestartSec = 2;
+     };
+     Install.WantedBy = [ "i3-session.target" ];
+   };

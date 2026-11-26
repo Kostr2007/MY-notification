@@ -67,7 +67,21 @@
  {% set r_menu = (10 * k) | round | int %}
  {% set dnd = "window_type = 'dnd' || (override_redirect && !_NET_WM_WINDOW_TYPE@ && XdndAware@ && class_g != 'i3-frame')" %}
  {% set overlays = "class_g = 'flameshot' || class_g = 'skippy-xd' || class_g = 'i3lock' || class_i = 'i3lock' || class_g = 'Peek' || class_g = 'slop'" %}
-@@ -160,16 +160,16 @@
+@@ -116,10 +116,11 @@
+         offset-y = { curve = "{{ e.spring }}"; duration = {{ d.long1 | sec }}; start = -28.0; end = 0.0; };
+         shadow-offset-y = "offset-y"; },
+       { triggers = [ "close", "hide" ];
+-        opacity = { curve = "{{ e.emph_accel }}"; duration = {{ d.short3 | sec }}; start = "window-raw-opacity-before"; end = 0.0; };
++        suppressions = [ "geometry" ];
++        opacity = { curve = "{{ e.standard }}"; duration = {{ d.short3 | sec }}; start = "window-raw-opacity-before"; end = 0.0; };
+         blur-opacity = "opacity";
+         shadow-opacity = "opacity";
+-        offset-y = { curve = "{{ e.emph_accel }}"; duration = {{ d.short3 | sec }}; start = 0.0; end = -12.0; };
++        offset-y = { curve = "{{ e.standard }}"; duration = {{ d.short3 | sec }}; start = 0.0; end = -8.0; };
+         shadow-offset-y = "offset-y"; },
+       { triggers = [ "geometry" ]; opacity = 1; }
+     ); },
+@@ -160,16 +161,16 @@
        { triggers = [ "geometry" ]; opacity = 1; }
      ); },
  
@@ -147,6 +161,25 @@
      elif name == "dnd-on":
          util.run("dunstctl", "set-paused", "true", timeout=5)
      elif name == "dnd-off":
+--- a/m3/cli.py
++++ b/m3/cli.py
+@@ -4,6 +4,7 @@
+   m3 restore                 вернуть обои (после перезапуска i3)
+   m3 render                  только перерисовать конфиги (без перезагрузки программ)
+   m3 apply [группы…]         перерисовать и применить (по умолчанию — всё)
++  m3 apply-power             применить только таймеры блокировки и гашения экрана
+   m3 tick                    раз в минуту: авто-тема, расписание ночного света
+   m3 theme wall <файл> | random | mode dark|light|auto|toggle | scheme <тип>
+            accent <#rrggbb|wallpaper> | contrast <-1…1> | reload | state | dirs
+@@ -121,6 +122,8 @@
+             apply.refresh({"icons"}, live=False, theme=not thumbs)
+         elif cmd == "apply":
+             _print(apply.refresh(set(args) if args else None))
++        elif cmd == "apply-power":
++            apply.apply_power(settings.load())
+         elif cmd == "tick":
+             apply.tick()
+         elif cmd == "theme":
 --- a/ui/app.js
 +++ b/ui/app.js
 @@ -774,6 +774,16 @@
