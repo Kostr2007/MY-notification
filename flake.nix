@@ -34,7 +34,7 @@
           patches = (old.patches or [ ]) ++ [ ./nix/m3-templates.patch ];
           postPatch = (old.postPatch or "") + ''
             substituteInPlace templates/dunstrc.j2 m3/system.py \
-              --replace-fail '@my_notification@' '${notification}/bin/my-notification'
+              --replace-fail '@my_notification@' '${notification}'
           '';
         });
     };

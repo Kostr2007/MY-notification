@@ -23,7 +23,7 @@ let
 in
 stdenvNoCC.mkDerivation {
   pname = "my-notification";
-  version = "0.4.0";
+  version = "0.4.1";
   src = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [
@@ -62,6 +62,14 @@ stdenvNoCC.mkDerivation {
       } \
       --prefix XDG_DATA_DIRS : "$out/share:${sound-theme-freedesktop}/share" \
       --set MY_NOTIFICATION_AUDIO_DIR "$out/share/my-notification/audio"
+    for theme in my-notification freedesktop; do
+      makeWrapper "$out/bin/my-notification" "$out/libexec/dunst/$theme" \
+        --add-flags "--dunst $theme system"
+    done
+    for cue in lullaby kalimba piano nylon glass; do
+      makeWrapper "$out/bin/my-notification" "$out/libexec/dunst/$cue" \
+        --add-flags "--dunst my-notification $cue"
+    done
     runHook postInstall
   '';
 

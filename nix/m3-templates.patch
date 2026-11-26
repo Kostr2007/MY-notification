@@ -52,7 +52,7 @@
  [m3-sound]
      msg_urgency = normal
 -    script = m3-notify-sound
-+    script = @my_notification@ --dunst {{ s.sound.theme }} {{ n.cue }}
++    script = @my_notification@/libexec/dunst/{{ s.sound.theme if n.cue == 'system' else n.cue }}
  {% endif %}
  
  # OSD громкости от m3-osd, если окно OSD eww недоступно
@@ -135,7 +135,7 @@
 +            args = ("--preview-notification", theme, config["notifications"]["cue"])
 +        else:
 +            args = ("--event", theme, "audio-volume-change")
-+        result = util.run("@my_notification@", *args, timeout=5)
++        result = util.run("@my_notification@/bin/my-notification", *args, timeout=5)
 +        if result.returncode:
 +            raise ValueError("Не удалось воспроизвести звук.")
 +    elif name == "notification-example":
