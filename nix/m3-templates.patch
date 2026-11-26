@@ -9,14 +9,24 @@
      height = (0, 320)
  {% if pos == "top-center" %}
      origin = top-center
-@@ -31,13 +31,13 @@
+@@ -24,27 +24,27 @@
+     progress_bar_height = 10
+     progress_bar_frame_width = 0
+     progress_bar_min_width = 300
+-    progress_bar_max_width = 420
++    progress_bar_max_width = 380
+     progress_bar_corner_radius = 5
+ 
+     indicate_hidden = yes
      transparency = 0
      separator_height = 0
-     padding = 16
+-    padding = 16
 -    horizontal_padding = 18
++    padding = 18
 +    horizontal_padding = 20
      text_icon_padding = 16
-     frame_width = 0
+-    frame_width = 0
++    frame_width = 1
      frame_color = "{{ c.outline_variant }}"
      gap_size = 10
      separator_color = frame
@@ -25,6 +35,14 @@
      icon_corner_radius = {{ (14 * k) | round | int }}
      sort = yes
  
+     font = {{ t.font }} {{ t.font_size }}
+     line_height = 2
+     markup = full
+-    format = "<span size='small' weight='500' foreground='{{ c.primary }}'>%a</span>\n<b>%s</b>\n%b"
++    format = "<span size='small' weight='500' foreground='{{ c.primary }}'>%a</span>\n<span size='large' weight='600'>%s</span>\n%b"
+     alignment = left
+     vertical_alignment = center
+     show_age_threshold = 60
 @@ -101,10 +101,10 @@
      override_dbus_timeout = {{ n.timeout }}
  
@@ -34,7 +52,7 @@
  [m3-sound]
      msg_urgency = normal
 -    script = m3-notify-sound
-+    script = @my_notification@ --dunst
++    script = @my_notification@ --dunst {{ s.sound.theme }} {{ n.cue }}
  {% endif %}
  
  # OSD громкости от m3-osd, если окно OSD eww недоступно
@@ -70,3 +88,117 @@
          shadow-offset-x = "offset-x"; blur-opacity = "opacity"; shadow-opacity = "opacity"; },
        { triggers = [ "geometry" ]; preset = "geometry-change"; duration = {{ d.medium1 | sec }}; }
      ); },
+--- a/templates/xsettingsd.conf.j2
++++ b/templates/xsettingsd.conf.j2
+@@ -4,7 +4,7 @@
+ Net/IconThemeName "{{ icon_theme }}"
+ Net/EnableEventSounds {{ 1 if s.sound.event_sounds else 0 }}
+ Net/EnableInputFeedbackSounds 0
+-Net/SoundThemeName "freedesktop"
++Net/SoundThemeName "{{ s.sound.theme }}"
+ Gtk/CursorThemeName "{{ cursor_theme }}"
+ Gtk/CursorThemeSize {{ cursor_size }}
+ Gtk/FontName "{{ t.font }} {{ t.font_size }}"
+--- a/m3/settings.py
++++ b/m3/settings.py
+@@ -168,9 +168,11 @@
+     "notifications.timeout": I(7, 2, 60, "dunst"),
+     "notifications.max": I(6, 1, 20, "dunst"),
+     "notifications.sound": B(True, "dunst"),
++    "notifications.cue": C("system", ["system", "lullaby", "kalimba", "piano", "nylon", "glass"], "dunst"),
+     "notifications.history": I(60, 10, 500, "dunst"),
+     # ── Звук ──
+     "sound.event_sounds": B(True, "fonts"),
++    "sound.theme": C("my-notification", ["my-notification", "freedesktop"], "sound"),
+     "sound.volume_step": I(5, 1, 20, "none"),
+     "sound.overamplify": B(False, "none"),
+     # ── Экран ──
+--- a/m3/system.py
++++ b/m3/system.py
+@@ -17,7 +17,7 @@
+ import time
+ from pathlib import Path
+ 
+-from . import apply, util
++from . import apply, settings, util
+ 
+ FAKE = os.environ.get("M3_FAKE") == "1"
+ 
+@@ -602,6 +602,22 @@
+         util.run("i3-msg", "-q", "reload", timeout=10)
+     elif name == "clear-notifications":
+         util.run("dunstctl", "history-clear", timeout=5)
++    elif name in ("preview-notification", "preview-sound-theme"):
++        config = settings.load()
++        theme = config["sound"]["theme"]
++        if name == "preview-notification":
++            args = ("--preview-notification", theme, config["notifications"]["cue"])
++        else:
++            args = ("--event", theme, "audio-volume-change")
++        result = util.run("@my_notification@", *args, timeout=5)
++        if result.returncode:
++            raise ValueError("Не удалось воспроизвести звук.")
++    elif name == "notification-example":
++        util.run(
++            "notify-send", "-a", "Система", "-i", "drive-harddisk",
++            "-h", "string:x-dunst-stack-tag:my-notification-preview",
++            "Резервная копия готова", "Изменения сохранены на внешнем диске.", timeout=5,
++        )
+     elif name == "dnd-on":
+         util.run("dunstctl", "set-paused", "true", timeout=5)
+     elif name == "dnd-off":
+--- a/ui/app.js
++++ b/ui/app.js
+@@ -774,6 +774,16 @@
+ }
+ 
+ // ── Уведомления ──
++function soundPreviewButton(title, icon, action) {
++  return h("button", { class: "btn tonal", onclick: async () => {
++    try {
++      await api("/api/session", { name: action });
++    } catch (e) {
++      snack(e.message, true);
++    }
++  } }, sym(icon), title);
++}
++
+ function pageNotifications(page) {
+   const pos = h("div", { class: "screen-pick", role: "group", "aria-label": "Положение уведомлений" });
+   const spots = [["top-left", "tl"], ["top-center", "tc"], ["top-right", "tr"], ["bottom-left", "bl"], ["bottom-right", "br"]];
+@@ -796,7 +806,17 @@
+     tile(row({ icon: "picture_in_picture", title: "Положение на экране", sub: "Где появляются всплывающие уведомления", search: "Положение уведомлений" }), h("div", { class: "tile-body" }, pos)),
+     sliderRow({ key: "notifications.timeout", title: "Показывать", icon: "timer", min: 2, max: 60, fmt: (v) => `${v} с` }),
+     sliderRow({ key: "notifications.max", title: "Не больше одновременно", icon: "stacks", min: 1, max: 20 }),
++  ));
++  page.append(group("Звук уведомлений",
+     switchRow({ key: "notifications.sound", title: "Звук уведомления", icon: "notifications_active" }),
++    selectRow({ key: "notifications.cue", title: "Сигнал", icon: "music_note", options: [
++      ["system", "Из звуковой темы"], ["lullaby", "Колыбельная"], ["kalimba", "Калимба"],
++      ["piano", "Пианино"], ["nylon", "Нейлоновая струна"], ["glass", "Стекло"],
++    ] }),
++  ));
++  page.append(h("div", { class: "actions" },
++    soundPreviewButton("Послушать сигнал", "play_arrow", "preview-notification"),
++    soundPreviewButton("Показать пример", "notifications", "notification-example"),
+   ));
+   page.append(group("История",
+     sliderRow({ key: "notifications.history", title: "Хранить в истории", icon: "history", min: 10, max: 500, step: 10, fmt: (v) => `${v} шт.` }),
+@@ -852,8 +872,16 @@
+     }
+   }
+   loadData("sound", "/api/sound", true).then(draw);
++  page.append(group("Звуки системы",
++    switchRow({ key: "sound.event_sounds", title: "Системные звуки", sub: "Щелчок громкости и звуки событий GTK", icon: "graphic_eq" }),
++    selectRow({ key: "sound.theme", title: "Звуковая тема", icon: "music_note", options: [
++      ["my-notification", "Колыбельная"], ["freedesktop", "Стандартная"],
++    ] }),
++  ));
++  page.append(h("div", { class: "actions" },
++    soundPreviewButton("Послушать щелчок громкости", "play_arrow", "preview-sound-theme"),
++  ));
+   page.append(group("Параметры",
+-    switchRow({ key: "sound.event_sounds", title: "Системные звуки", sub: "Щелчок громкости, звуки событий GTK", icon: "graphic_eq" }),
+     sliderRow({ key: "sound.volume_step", title: "Шаг громкости", sub: "Для клавиш и колеса мыши над панелью", icon: "linear_scale", min: 1, max: 20, fmt: (v) => `${v} %` }),
+     switchRow({ key: "sound.overamplify", title: "Громче 100 %", sub: "Клавиши громкости поднимают до 150 % — возможны искажения", icon: "campaign" }),
+   ));

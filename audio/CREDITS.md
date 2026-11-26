@@ -4,11 +4,14 @@
 
 | Файл | Автор и запись | Обработка |
 | --- | --- | --- |
+| `lullaby.wav` | [C5 soft - kalimba, hollandm](https://freesound.org/people/hollandm/sounds/691785/) | Атака смягчена и отфильтрована, через 126 мс звучит более тихая нота на три полутона ниже. 553 мс. |
 | `kalimba.wav` | [C5 soft - kalimba, hollandm](https://freesound.org/people/hollandm/sounds/691785/) | Два приглушённых щипка с подъёмом на четыре полутона и интервалом 82 мс. 427 мс. |
 | `piano.wav` | [Upright Piano Remeau up close XY - F#4, Sadiquecat](https://freesound.org/people/Sadiquecat/sounds/794460/) | Скруглённая атака, затем спуск на два полутона через 112 мс. 437 мс. |
 | `nylon.wav` | [Nylon guitar-minor pluck, mitchanary](https://freesound.org/people/mitchanary/sounds/614341/) | Из записи взят первый щипок. Второй из него же поднят на квинту и смещён на 91 мс. 374 мс. |
 
 Исходники — публичные HQ MP3 с Freesound, лицензия [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/). Все ноты в готовых сигналах получены из этих записей. Файлы — моно PCM 48 кГц, 16 бит.
+
+Сигналы событий `volume`, `connect`, `disconnect`, `attention` и `error` используют ту же запись калимбы. Громкость отмечает короткий удар, подключение — подъём, отключение — спад, предупреждение — повтор одной ноты, ошибка — более низкий нисходящий интервал.
 
 ## Дерево, бумага и капля
 

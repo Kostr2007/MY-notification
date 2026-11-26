@@ -4,17 +4,33 @@
   makeWrapper,
   dunst,
   libcanberra-gtk3,
+  sound-theme-freedesktop,
 }:
 
+let
+  events = {
+    message-new-instant = "lullaby";
+    message-new-email = "lullaby";
+    audio-volume-change = "volume";
+    device-added = "connect";
+    device-removed = "disconnect";
+    dialog-information = "connect";
+    dialog-question = "attention";
+    dialog-warning = "attention";
+    dialog-error = "error";
+    window-attention = "attention";
+  };
+in
 stdenvNoCC.mkDerivation {
   pname = "my-notification";
-  version = "0.3.0";
+  version = "0.4.0";
   src = lib.fileset.toSource {
     root = ../.;
     fileset = lib.fileset.unions [
       ../audio
       ../design
       ../tools/play.sh
+      ./sound-theme.index
     ];
   };
 
@@ -28,6 +44,14 @@ stdenvNoCC.mkDerivation {
     install -Dm644 -t "$out/share/my-notification/audio/source" audio/source/*
     install -Dm644 design/notification.svg "$out/share/my-notification/design/notification.svg"
     install -Dm644 design/preview.html "$out/share/my-notification/design/preview.html"
+    theme="$out/share/sounds/my-notification"
+    install -Dm644 nix/sound-theme.index "$theme/index.theme"
+    mkdir -p "$theme/stereo"
+    ${lib.concatLines (
+      lib.mapAttrsToList (
+        event: cue: ''ln -s "../../../my-notification/audio/${cue}.wav" "$theme/stereo/${event}.wav"''
+      ) events
+    )}
     patchShebangs "$out/libexec/my-notification"
     makeWrapper "$out/libexec/my-notification" "$out/bin/my-notification" \
       --prefix PATH : ${
@@ -36,6 +60,7 @@ stdenvNoCC.mkDerivation {
           libcanberra-gtk3
         ]
       } \
+      --prefix XDG_DATA_DIRS : "$out/share:${sound-theme-freedesktop}/share" \
       --set MY_NOTIFICATION_AUDIO_DIR "$out/share/my-notification/audio"
     runHook postInstall
   '';

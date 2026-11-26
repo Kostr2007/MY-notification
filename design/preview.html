@@ -107,6 +107,7 @@
   <div class="controls">
     <label for="variant">Звук
       <select id="variant">
+        <option value="lullaby" data-source="kalimba">Колыбельная</option>
         <optgroup label="Новые варианты">
           <option value="kalimba">Калимба</option>
           <option value="piano">Пианино</option>
@@ -124,10 +125,10 @@
   </div>
   <div class="controls">
     <label><input id="sound" type="checkbox" checked> Со звуком</label>
-    <a id="download" href="../audio/kalimba.wav" download>Скачать WAV</a>
+    <a id="download" href="../audio/lullaby.wav" download>Скачать WAV</a>
   </div>
   <p id="status" role="status"></p>
-  <audio id="cue" src="../audio/kalimba.wav" preload="auto"></audio>
+  <audio id="cue" src="../audio/lullaby.wav" preload="auto"></audio>
   <audio id="source" src="../audio/source/kalimba.mp3" preload="none"></audio>
 </main>
 <script>
@@ -204,7 +205,8 @@
     status.textContent = "";
     source.pause();
     cue.src = download.href = `../audio/${variant.value}.wav`;
-    source.src = `../audio/source/${variant.value}.mp3`;
+    const original = variant.selectedOptions[0].dataset.source ?? variant.value;
+    source.src = `../audio/source/${original}.mp3`;
   }
 
   variant.addEventListener("change", selectSound);
@@ -244,6 +246,6 @@
   sound.addEventListener("change", () => {
     if (!sound.checked) cue.pause();
   });
-  if (variant.value !== "kalimba") selectSound();
+  if (variant.value !== "lullaby") selectSound();
 </script>
 </html>

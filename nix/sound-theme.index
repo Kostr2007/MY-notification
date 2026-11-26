@@ -1,0 +1,9 @@
+[Sound Theme]
+Name=MY Notification
+Name[ru]=Колыбельная
+Comment=Acoustic kalimba sounds for desktop events
+Inherits=freedesktop
+Directories=stereo
+
+[stereo]
+OutputProfile=stereo

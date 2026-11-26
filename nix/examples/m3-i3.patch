@@ -40,12 +40,21 @@
      pname = "m3";
      version = "2.0";
      src = ./m3;
-@@ -143,6 +144,8 @@
+@@ -143,6 +144,9 @@
      };
    };
  
 +  m3 = my-notification.lib.withM3 pkgs m3Base;
++  notification = my-notification.packages.${pkgs.stdenv.hostPlatform.system}.default;
 +
    legacyWallpapers = pkgs.callPackage ../../wallpapers/layered.nix {
      inherit (cfg.wallpaperResolution) width height;
    };
+@@ -184,6 +188,7 @@
+   home.packages = [ m3 wallpaper-my.packages.${pkgs.stdenv.hostPlatform.system}.default ];
+ 
+   xdg.configFile."m3/defaults.json".text = builtins.toJSON cfg.settings;
++  xdg.dataFile."sounds/my-notification".source = "${notification}/share/sounds/my-notification";
+   xdg.configFile."matugen/config.toml".text = matugenConfig;
+ 
+   # Обои m3 (свои клади в ~/Изображения/Wallpapers или ~/Pictures/Wallpapers)

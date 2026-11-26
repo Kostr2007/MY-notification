@@ -45,14 +45,13 @@ DROP = (
 
 def two_notes(
     *, start, pitch, interval, delay, reply_level, attack, fade, lowpass,
-    sample_length=0.65, first_fade=(90, 160),
+    sample_length=0.65, first_fade=(90, 160), lead_ms=38,
 ):
     # Two pitches of the same acoustic note share its attack and resonance.
     first_rate = round(RATE * 2 ** (pitch / 12))
     second_rate = round(RATE * 2 ** ((pitch + interval) / 12))
     first_fade_start, first_fade_time = first_fade
     fade_start_ms, fade_time_ms = fade
-    lead_ms = 38
     reply_ms = lead_ms + delay
     length = (reply_ms + fade_start_ms + fade_time_ms) * (RATE // 1000)
     return (
@@ -67,6 +66,12 @@ def two_notes(
         f"volume={reply_level},adelay={reply_ms}[back];"
         f"[front][back]amix=inputs=2:normalize=0,apad=whole_len={length},atrim=end_sample={length}"
     )
+
+
+VOLUME = (
+    MONO + ",asetrate=35959,aresample=48000,highpass=f=240,lowpass=f=3000,"
+    "afade=t=in:d=0.004,afade=t=out:st=0.022:d=0.063,atrim=duration=0.085"
+)
 
 
 CUES = {
@@ -91,6 +96,42 @@ CUES = {
         two_notes(start=0.016, pitch=5, interval=7, delay=91, reply_level=0.51,
                   attack=0.004, fade=(105, 140), lowpass=4000, sample_length=0.44),
         -18,
+    ),
+    "lullaby": (
+        "kalimba.mp3",
+        two_notes(pitch=0, interval=-3, delay=126, reply_level=0.46,
+                  start=0, attack=0.005, fade=(155, 234), first_fade=(123, 198),
+                  lowpass=2900),
+        -18,
+    ),
+    "volume": ("kalimba.mp3", VOLUME, -24),
+    "connect": (
+        "kalimba.mp3",
+        two_notes(pitch=-7, interval=7, delay=68, reply_level=0.67,
+                  start=0, attack=0.004, fade=(52, 114), first_fade=(48, 96),
+                  lowpass=3450, lead_ms=0),
+        -19,
+    ),
+    "disconnect": (
+        "kalimba.mp3",
+        two_notes(pitch=-3, interval=-4, delay=74, reply_level=0.53,
+                  start=0, attack=0.005, fade=(68, 111), first_fade=(50, 107),
+                  lowpass=2900, lead_ms=0),
+        -20,
+    ),
+    "attention": (
+        "kalimba.mp3",
+        two_notes(pitch=-2, interval=0, delay=93, reply_level=0.72,
+                  start=0, attack=0.003, fade=(44, 137), first_fade=(44, 90),
+                  lowpass=3750, lead_ms=0),
+        -17,
+    ),
+    "error": (
+        "kalimba.mp3",
+        two_notes(pitch=-5, interval=-6, delay=86, reply_level=0.69,
+                  start=0, attack=0.004, fade=(70, 123), first_fade=(60, 110),
+                  lowpass=3100, lead_ms=0),
+        -17,
     ),
 }
 
